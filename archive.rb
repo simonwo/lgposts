@@ -40,7 +40,7 @@ TUMBLR.posts(:ferronickel, tag: 'looking glasses', notes_info: true).each do |po
     reblog.private = fetched_post.nil?
   end
 
-  File::write "#{post.id_string}.json", post.to_json
+  File::write "_site/#{post.id_string}.json", post.to_json
 
   # def printnote note, depth=0
   #   puts "#{"\t" * depth}#{note.blog_name}: #{note.reply_text} #{(note.tags || []).map{|tag| "#" + tag}.join(' ')}"

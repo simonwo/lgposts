@@ -1,0 +1,45 @@
+name: Archive
+on:
+  push:
+  schedule:
+    # Update every four hours, at quarter past to avoid top of hour load.
+    - cron: '15 0,4,8,12,16,20 * * *'
+    # On Mondays and Thursdays, run additionally around likely update times.
+    - cron: '15 19,21,22,23 * * 1,4'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+      - run: mkdir _site
+      - run: bundle exec ruby archive.rb
+        env:
+          TUMBLR_SECRET_KEY: ${{ secrets.TUMBLR_SECRET_KEY }}
+          TUMBLR_CLIENT_KEY: ${{ secrets.TUMBLR_CLIENT_KEY }}
+      - uses: actions/upload-pages-artifact@v3.0.1
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    if: ${{ github.ref == 'refs/heads/main' }}
+
+    permissions:
+      pages: write      # to deploy to Pages
+      id-token: write   # to verify the deployment originates from an appropriate source
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
