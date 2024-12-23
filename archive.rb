@@ -38,6 +38,17 @@ TUMBLR.posts(:ferronickel, tag: 'looking glasses', notes_info: true).each do |po
     fetched_post = TumblrLite::post(reblog.blog_name, reblog.post_id)
     reblog.tags = fetched_post.tags unless fetched_post.nil?
     reblog.private = fetched_post.nil?
+
+    if !fetched_post.nil? && !reblog.added_text.nil?
+      full_post = TUMBLR.post(reblog.blog_name, reblog.post_id)
+      reblog.added_text = full_post.reblog.comment
+      response_to = full_post.trail[-2].post.id
+      reply_to = notes.filter {|n| n.post_id == response_to }.first
+      next if reply_to.nil?
+
+      (reply_to.replies ||= []) << reblog
+      reblog.is_response = true
+    end
   end
 
   File::write "_site/#{post.id_string}.json", post.to_json
