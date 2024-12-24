@@ -11,10 +11,10 @@ class OpenStruct
 end
 
 TUMBLR = Tumblr.new
-TUMBLR.posts(:ferronickel, tag: 'looking glasses', notes_info: true).each do |post|
-  notes = post.notes
-  replies = notes.filter {|n| n.type == "reply" }.reverse
-  reblogs = notes.filter {|n| n.type == "reblog" }
+TUMBLR.posts(:ferronickel, tag: 'looking glasses').each do |post|
+  post.notes = TUMBLR.notes(post.blog_name, post.id, :all)
+  replies = post.notes.filter {|n| n.type == "reply" }.reverse
+  reblogs = post.notes.filter {|n| n.type == "reblog" }
 
   replies.each_cons(2) do |prev, reply|
     response_to = reply.formatting.filter {|f| f.type == "mention" }.first
@@ -58,7 +58,7 @@ TUMBLR.posts(:ferronickel, tag: 'looking glasses', notes_info: true).each do |po
       # from the named blog.
       reblogs.filter {|r| r.timestamp <= reblog.timestamp && r.blog_name == reblog.reblog_parent_blog_name }.last
     else
-      notes.filter {|n| n.post_id == reblog.reblogged_from }.first
+      post.notes.filter {|n| n.post_id == reblog.reblogged_from }.first
     end
     next if reply_to.nil?
 
@@ -67,20 +67,6 @@ TUMBLR.posts(:ferronickel, tag: 'looking glasses', notes_info: true).each do |po
   end
 
   File::write "_site/#{post.id_string}.json", post.to_json
-
-  # def printnote note, depth=0
-  #   puts "#{"\t" * depth}#{note.blog_name}: #{note.reply_text} #{(note.tags || []).map{|tag| "#" + tag}.join(' ')}"
-  #   (note.replies || []).each do |reply|
-  #     printnote reply, depth+1
-  #   end
-  # end
-
-  # notes.sort_by(&:timestamp).each do |note|
-  #   next if note.is_response
-  #   next unless ["reply", "reblog"].include? note.type
-  #   next if note.type == "reblog" && (note.tags || []).empty? && (note.replies || []).empty?
-  #   printnote note
-  # end
 end
 
 STDOUT.puts "#{TUMBLR.instance_variable_get(:'@request_counter')} requests."
