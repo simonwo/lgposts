@@ -36,19 +36,27 @@ TUMBLR.posts(:ferronickel, tag: 'looking glasses', notes_info: true).each do |po
 
   reblogs.each do |reblog|
     fetched_post = TumblrLite::post(reblog.blog_name, reblog.post_id)
-    reblog.tags = fetched_post.tags unless fetched_post.nil?
     reblog.private = fetched_post.nil?
+    next if fetched_post.nil?
 
+    # If the reblog has added text, we might not have all of it, so we 'd better go get it.
     if !fetched_post.nil? && !reblog.added_text.nil?
       full_post = TUMBLR.post(reblog.blog_name, reblog.post_id)
       reblog.added_text = full_post.reblog.comment
-      response_to = full_post.trail[-2].post.id
-      reply_to = notes.filter {|n| n.post_id == response_to }.first
-      next if reply_to.nil?
-
-      (reply_to.replies ||= []) << reblog
-      reblog.is_response = true
     end
+
+    reblog.tags = fetched_post.tags
+
+    # We could compare URLs directly here instead of extracting the ID, which
+    # would probably be safer. But we don't know the URL from the note
+    # structure, so we'd have to look up all the posts first for their URLs, and
+    # then post-process the links between them.
+    response_to = fetched_post.send(:"reblogged-from-url").split("/").last
+    reply_to = notes.filter {|n| n.post_id == response_to }.first
+    next if reply_to.nil?
+
+    (reply_to.replies ||= []) << reblog
+    reblog.is_response = true
   end
 
   File::write "_site/#{post.id_string}.json", post.to_json
