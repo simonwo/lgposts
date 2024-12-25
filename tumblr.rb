@@ -36,6 +36,7 @@ class Tumblr
   end
 
   def post blog, id, **params
+    raise ArgumentError, 'ID must be provided' if id.nil? || id.empty?
     protect { get('v2', 'blog', blog, 'posts', id: id, **params).posts.first }
   end
 
@@ -99,6 +100,9 @@ FOOTER = ';'
 class TumblrLite
   class << self
     def post blog, id
+      raise ArgumentError, 'Blog name must be provided' if blog.nil? || blog.empty?
+      raise ArgumentError, 'ID must be provided' if id.nil? || id.empty?
+
       protect do
         begin
           url = "https://#{blog}.tumblr.com/api/read/json?id=#{id}"

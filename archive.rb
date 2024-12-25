@@ -21,7 +21,7 @@ TUMBLR.posts(:ferronickel, tag: ['looking glasses', 'ferrousart'], sort: :asc).e
     next
   end
 
-  reblogs = TUMBLR.notes(post.blog_name, post.id, :reblogs_with_tags)
+  reblogs = TUMBLR.notes(post.blog_name, post.id, :reblogs_with_tags).filter {|note| note.type == "reblog" }
   conversation = TUMBLR.notes(post.blog_name, post.id, :conversation)
   replies = conversation.filter {|note| note.type == "reply" }
   all_notes = nil
