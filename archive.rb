@@ -24,6 +24,7 @@ TUMBLR.posts(:ferronickel, tag: ['looking glasses', 'ferrousart'], sort: :asc).e
   reblogs = TUMBLR.notes(post.blog_name, post.id, :reblogs_with_tags)
   conversation = TUMBLR.notes(post.blog_name, post.id, :conversation)
   replies = conversation.filter {|note| note.type == "reply" }
+  all_notes = nil
 
   conversation.filter {|note| note.type == "reblog" }.each do |note|
     found_reblog = reblogs.filter {|reblog| reblog.post_id == note.post_id }.first
@@ -65,11 +66,28 @@ TUMBLR.posts(:ferronickel, tag: ['looking glasses', 'ferrousart'], sort: :asc).e
       reblog.reblog_parent_post_id = fetched_post.send(:"reblogged-from-url").split("/").select {|path| path =~ /\d+/ }.first
     end
 
-    # If the reblog has added text, we might not have all of it, so we 'd better go get it.
-    if !reblog.private && !reblog.added_text.nil?
-      full_post = TUMBLR.post(reblog.blog_name, reblog.post_id)
-      unless full_post.nil?
-        reblog.added_text = full_post.reblog.comment
+    # If the reblog has added text, we might not have all of it, so let's get it
+    # Calling post(..., notes_info: true) / notes(..., mode: :reblogs_with_tags)
+    # seems to return a limited summary of the added text (with no indication
+    # that anything is missing ofc), so we know added_text is present, we just
+    # don't know how much of it is really there.
+    unless reblog.added_text.nil?
+      unless reblog.private
+        # The post itself obviously has the full text, but if the post is
+        # private this call will fail, so skip it if we already know that
+        full_post = TUMBLR.post(reblog.blog_name, reblog.post_id)
+        unless full_post.nil?
+          reblog.added_text = full_post.reblog.comment
+        end
+      end
+
+      if full_post.nil?
+        reblog.private = true
+        # If a private note has added text, for some reason we can get the most
+        # text if we call :all. So lets do that once only for this post.
+        all_notes ||= TUMBLR.notes(post.blog_name, post.id, :all)
+        full_post = all_notes.filter {|note| note.post_id == reblog.post_id }.first
+        reblog.added_text = full_post.added_text
       end
     end
 

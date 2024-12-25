@@ -2,6 +2,7 @@ require 'oauth'
 require 'json'
 require 'ostruct'
 require 'open-uri'
+require 'timeout_cache'
 
 TOKEN_FILE = './.token.yml'
 
@@ -22,6 +23,8 @@ def protect &block
     end
   end
 end
+
+CACHE = TimeoutCache.new
 
 class Tumblr
   def initialize
@@ -61,6 +64,9 @@ class Tumblr
     uri.query = URI.encode_www_form params
     STDOUT.puts "GET #{uri.to_s}"
 
+    cached = CACHE.get(uri)
+    return cached unless cached.nil?
+
     @request_counter += 1
     response = client.request(:get, uri.to_s)
     parsed = JSON::parse response.read_body, object_class: OpenStruct
@@ -71,6 +77,7 @@ class Tumblr
       )
     end
 
+    CACHE.set(uri, parsed.response, time: 15 * 60)
     parsed.response
   end
 
