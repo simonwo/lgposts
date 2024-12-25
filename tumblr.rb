@@ -51,6 +51,13 @@ class Tumblr
 
   def get *path, **params
     uri = URI::parse("/" + path.join('/'))
+    params.to_a.each do |key, value|
+      case value
+      when Array
+        value.each_with_index {|v, i| params["#{key}[#{i}]"] = v }
+        params.delete key
+      end
+    end
     uri.query = URI.encode_www_form params
     STDOUT.puts "GET #{uri.to_s}"
 
