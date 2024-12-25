@@ -10,11 +10,14 @@ class OpenStruct
   end
 end
 
+PAGE_SIZE = 50
+
 TUMBLR = Tumblr.new
-TUMBLR.posts(:ferronickel, tag: 'looking glasses').each do |post|
-  post.notes = TUMBLR.notes(post.blog_name, post.id, :all)
-  replies = post.notes.filter {|n| n.type == "reply" }.reverse
-  reblogs = post.notes.filter {|n| n.type == "reblog" }
+TUMBLR.posts(:ferronickel, tag: ['looking glasses', 'ferrousart'], sort: :asc).each do |post|
+  if post.note_count / PAGE_SIZE > 10
+    puts "::warning:: Skipping #{post.id_string} because it has too many notes (#{post.note_count})"
+    next
+  end
 
   replies.each_cons(2) do |prev, reply|
     response_to = reply.formatting.filter {|f| f.type == "mention" }.first
