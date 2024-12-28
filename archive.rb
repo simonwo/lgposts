@@ -1,6 +1,6 @@
-require 'oauth'
 require 'yaml'
 require 'json'
+require 'nokogiri'
 
 require_relative 'tumblr'
 
@@ -10,15 +10,20 @@ class OpenStruct
   end
 end
 
+def extract_post_id url
+  url.split("/").select {|path| path =~ /\d+/ }.first
+end
+
 PAGE_SIZE = 50
 
 TUMBLR = Tumblr.new
-TUMBLR.posts(:ferronickel, tag: ['looking glasses', 'ferrousart'], sort: :asc).each do |post|
-  next unless ARGV.empty? || ARGV.include?(post.id_string)
+
+def archive post
+  return unless ARGV.empty? || ARGV.include?(post.id_string)
 
   if post.note_count / PAGE_SIZE > 10
-    puts "::warning:: Skipping #{post.id_string} because it has too many notes (#{post.note_count})"
-    next
+    puts "::warning::Skipping #{post.id_string} because it has too many notes (#{post.note_count})"
+    return
   end
 
   reblogs = TUMBLR.notes(post.blog_name, post.id, :reblogs_with_tags).filter {|note| note.type == "reblog" }
@@ -110,4 +115,22 @@ TUMBLR.posts(:ferronickel, tag: ['looking glasses', 'ferrousart'], sort: :asc).e
   File::write "_site/#{post.id_string}.json", post.to_json
 end
 
-STDOUT.puts "#{TUMBLR.instance_variable_get(:'@request_counter')} requests."
+if __FILE__ == $0
+  masterpost = TUMBLR.post(:ferronickel, '771054699653791744')
+  links = Nokogiri::parse("<html>" + masterpost.body + "</html>").css('a[href^="https://www.tumblr.com"]').map {|a| a.attribute("href").value }
+  post_ids = Set.new links.map &method(:extract_post_id)
+
+  # Get all the posts tagged with #looking glasses and #ferrousart, which
+  # catches most of them but misses some early ones
+  TUMBLR.posts(:ferronickel, tag: ['looking glasses', 'ferrousart']).each do |post|
+    post_ids -= [post.id_string]
+    archive post
+  end
+
+  # Now get any links from the masterpost that we didn't archive
+  post_ids.each do |id|
+    archive TUMBLR.post(:ferronickel, id)
+  end
+
+  STDOUT.puts "#{TUMBLR.instance_variable_get(:'@request_counter')} requests."
+end

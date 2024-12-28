@@ -36,7 +36,7 @@ class Tumblr
   end
 
   def post blog, id, **params
-    raise ArgumentError, 'ID must be provided' if id.nil? || id.empty?
+    raise ArgumentError, 'ID must be provided' if id.nil? || id.to_s.empty?
     protect { get('v2', 'blog', blog, 'posts', id: id, **params).posts.first }
   end
 
@@ -73,7 +73,7 @@ class Tumblr
     parsed = JSON::parse response.read_body, object_class: OpenStruct
     if parsed.meta.status >= 400
       raise Net::HTTPError.new(
-        parsed.errors.map(&:detail).join("\n"),
+        ["#{parsed.meta.status} #{parsed.meta.msg}.", *parsed.errors.map(&:detail)].join(" "),
         Net::HTTPResponse::CODE_TO_OBJ[parsed.meta.status.to_s].new(response.http_version, parsed.meta.status, parsed.meta.msg),
       )
     end
@@ -101,7 +101,7 @@ class TumblrLite
   class << self
     def post blog, id
       raise ArgumentError, 'Blog name must be provided' if blog.nil? || blog.empty?
-      raise ArgumentError, 'ID must be provided' if id.nil? || id.empty?
+      raise ArgumentError, 'ID must be provided' if id.nil? || id.to_s.empty?
 
       protect do
         begin
