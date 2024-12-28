@@ -31,22 +31,20 @@ TUMBLR.posts(:ferronickel, tag: ['looking glasses', 'ferrousart'], sort: :asc).e
     found_reblog.table.update(note.table)
   end
 
-  post.notes = []
-  post.notes.concat(reblogs)
-  post.notes.concat(conversation.filter {|note| note.type == "reply"})
-
-  replies.each_cons(2) do |prev, reply|
+  replies.each do |reply|
     response_to = reply.formatting.filter {|f| f.type == "mention" }.first
     next if response_to.nil?
 
-    if prev.blog_name == response_to.blog.name
+    post_filter = Proc.new {|r| r.timestamp < reply.timestamp && r.blog_name == response_to.blog.name }
+    prev = replies.sort_by(&:timestamp).select(&post_filter).last
+    unless prev.nil?
       (prev.replies ||= []) << reply
       reply.is_response = true
       next
     end
 
-    matching_reblog = reblogs.filter {|r| r.timestamp <= reply.timestamp && r.blog_name == response_to.blog.name }.last
-    if !matching_reblog.nil?
+    matching_reblog = reblogs.sort_by(&:timestamp).select(&post_filter).last
+    unless matching_reblog.nil?
       (matching_reblog.replies ||= []) << reply
       reply.is_response = true
       next
@@ -63,7 +61,7 @@ TUMBLR.posts(:ferronickel, tag: ['looking glasses', 'ferrousart'], sort: :asc).e
 
       reblog.tags = fetched_post.tags
       reblog.url = fetched_post.url
-      reblog.reblog_parent_post_id = fetched_post.send(:"reblogged-from-url").split("/").select {|path| path =~ /\d+/ }.first
+      reblog.reblog_parent_post_id = extract_post_id(fetched_post.send(:"reblogged-from-url"))
     end
 
     # If the reblog has added text, we might not have all of it, so let's get it
@@ -95,9 +93,9 @@ TUMBLR.posts(:ferronickel, tag: ['looking glasses', 'ferrousart'], sort: :asc).e
       # If the reblog is private, we have no way of knowing who it was really
       # reblogging. So as above, we'll assume that it was the most recent reblog
       # from the named blog.
-      reblogs.filter {|r| r.timestamp <= reblog.timestamp && r.blog_name == reblog.reblog_parent_blog_name }.last
+      reblogs.filter {|r| r.timestamp < reblog.timestamp && r.blog_name == reblog.reblog_parent_blog_name }.last
     else
-      post.notes.filter {|n| n.post_id == reblog.reblog_parent_post_id }.first
+      reblogs.filter {|n| n.post_id == reblog.reblog_parent_post_id }.first
     end
     next if reply_to.nil?
 
@@ -105,6 +103,10 @@ TUMBLR.posts(:ferronickel, tag: ['looking glasses', 'ferrousart'], sort: :asc).e
     reblog.is_response = true
   end
 
+  post.notes = []
+  post.notes.concat(reblogs)
+  post.notes.concat(conversation.filter {|note| note.type == "reply"})
+  post.notes.sort_by!(&:timestamp)
   File::write "_site/#{post.id_string}.json", post.to_json
 end
 
