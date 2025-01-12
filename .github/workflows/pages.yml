@@ -1,11 +1,12 @@
 name: Archive
 on:
-  push:
   schedule:
-    # Update every four hours, at quarter past to avoid top of hour load.
-    - cron: '15 0,4,8,12,16,20 * * *'
+    # Update every 12 hours, at quarter past to avoid top of hour load.
+    - cron: '15 11,23 * * *'
     # On Mondays, run additionally around likely update times.
-    - cron: '15 13,14,15,21,22,23 * * 1'
+    - cron: '15 12,13,14,15,21,22 * * 1'
+    # On Tuesdays, run more often to catch notes in the first 48hrs.
+    - cron: '15 0,3,7,15,19 * * 2'
 
 jobs:
   build:
