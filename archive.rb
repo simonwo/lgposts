@@ -126,10 +126,16 @@ if __FILE__ == $0
   end
 
   # Get all the posts tagged with #looking glasses and #ferrousart, which
-  # catches most of them but misses some early ones
-  TUMBLR.posts(:ferronickel, tag: ['looking glasses', 'ferrousart']).each do |post|
-    post_ids -= [post.id_string]
-    archive post
+  # catches most of them but misses some early ones, and also pull the
+  # #runetober 2022 posts as well
+  [
+    ['looking glasses', 'ferrousart'],
+    ['runetober', 'ferrousart'],
+  ].each do |tagset|
+    TUMBLR.posts(:ferronickel, tag: tagset).each do |post|
+      post_ids -= [post.id_string]
+      archive post
+    end
   end
 
   # Now get any links from the masterpost that we didn't archive
