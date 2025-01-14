@@ -5,6 +5,7 @@ require 'open-uri'
 require 'timeout_cache'
 
 TOKEN_FILE = './.token.yml'
+MAX_WAIT_TIME = 300
 
 def protect &block
   attempts = 0
@@ -12,10 +13,13 @@ def protect &block
     attempts += 1
     block.call
   rescue Net::HTTPError => error
+    wait_time = 5 ** attempts
+    raise error if wait_time > MAX_WAIT_TIME
+
     case error.response
-    when Net::HTTPTooManyRequests
-      STDERR.puts "\tBack off for #{5 ** attempts}s"
-      sleep (5 ** attempts)
+    when Net::HTTPTooManyRequests, Net::HTTPInternalServerError
+      STDERR.puts "\t#{error.response.code} #{error.response.message}: Back off for #{wait_time}s"
+      sleep wait_time
       retry
     when Net::HTTPNotFound
       nil
@@ -70,6 +74,8 @@ class Tumblr
 
     @request_counter += 1
     response = client.request(:get, uri.to_s)
+    response.error! unless response.is_a? Net::HTTPOK
+
     parsed = JSON::parse response.read_body, object_class: OpenStruct
     if parsed.meta.status >= 400
       raise Net::HTTPError.new(
