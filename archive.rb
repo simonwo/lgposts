@@ -116,9 +116,13 @@ def archive post
 end
 
 if __FILE__ == $0
-  masterpost = TUMBLR.post(:ferronickel, '771054699653791744')
-  links = Nokogiri::parse("<html>" + masterpost.body + "</html>").css('a[href^="https://www.tumblr.com"]').map {|a| a.attribute("href").value }
-  post_ids = Set.new links.map &method(:extract_post_id)
+  post_ids = Set.new
+  masterposts = ['771054699653791744', '748691921631952896']
+  masterposts.each do |post_id|
+    masterpost = TUMBLR.post(:ferronickel, post_id)
+    links = Nokogiri::parse("<html>" + masterpost.body + "</html>").css('a[href^="https://www.tumblr.com"]').map {|a| a.attribute("href").value }
+    post_ids.merge links.map &method(:extract_post_id)
+  end
 
   # Get all the posts tagged with #looking glasses and #ferrousart, which
   # catches most of them but misses some early ones
