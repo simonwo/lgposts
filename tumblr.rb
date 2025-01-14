@@ -74,7 +74,12 @@ class Tumblr
 
     @request_counter += 1
     response = client.request(:get, uri.to_s)
-    response.error! unless response.is_a? Net::HTTPOK
+    unless response.is_a? Net::HTTPOK
+      raise Net::HTTPError.new(
+        "#{response.code} #{response.message}",
+        Net::HTTPResponse::CODE_TO_OBJ[response.code.to_s].new(response.http_version, response.code.to_i, response.message),
+      )
+    end
 
     parsed = JSON::parse response.read_body, object_class: OpenStruct
     if parsed.meta.status >= 400
