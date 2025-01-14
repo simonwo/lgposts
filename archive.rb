@@ -1,5 +1,6 @@
 require 'yaml'
 require 'json'
+require 'uri'
 require 'nokogiri'
 
 require_relative 'tumblr'
@@ -11,7 +12,7 @@ class OpenStruct
 end
 
 def extract_post_id url
-  url.split("/").select {|path| path =~ /\d+/ }.first
+  URI::parse(url).path.split("/").select {|path| path =~ /^\d+$/ }.first
 end
 
 PAGE_SIZE = 50
