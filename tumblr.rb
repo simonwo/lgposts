@@ -18,7 +18,7 @@ def protect &block
 
     case error.response
     when Net::HTTPTooManyRequests, Net::HTTPInternalServerError
-      STDERR.puts "\t#{error.response.code} #{error.response.message}: Back off for #{wait_time}s"
+      STDOUT.puts "\t#{error.response.code} #{error.response.message}: Back off for #{wait_time}s"
       sleep wait_time
       retry
     when Net::HTTPNotFound
@@ -125,7 +125,7 @@ class TumblrLite
         rescue OpenURI::HTTPError => error
           raise Net::HTTPError.new(
             error.message,
-            Net::HTTPResponse::CODE_TO_OBJ[error.message[0...3]].new(nil, error.message[0...3], error.message[5..]),
+            Net::HTTPResponse::CODE_TO_OBJ[error.message[0...3]].new(nil, error.message[0...3], error.message[4..]),
           )
         end
       end
