@@ -113,7 +113,12 @@ def archive post
   post.notes.concat(reblogs)
   post.notes.concat(conversation.filter {|note| note.type == "reply"})
   post.notes.sort_by!(&:timestamp)
-  File::write "_site/#{post.id_string}.json", post.to_json
+  post.retrieved = Time.now.to_i
+  File::write post_filename(post.id_string), post.to_json
+end
+
+def post_filename post_id
+  "_site/#{post_id.to_s}.json"
 end
 
 if __FILE__ == $0
