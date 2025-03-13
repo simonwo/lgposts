@@ -20,8 +20,6 @@ PAGE_SIZE = 50
 TUMBLR = Tumblr.new
 
 def archive post
-  return unless ARGV.empty? || ARGV.include?(post.id_string)
-
   if post.note_count / PAGE_SIZE > 10
     puts "::warning::Skipping #{post.id_string} because it has too many notes (#{post.note_count})"
     return
@@ -123,23 +121,27 @@ end
 
 if __FILE__ == $0
   post_ids = Set.new
-  masterposts = ['771054699653791744', '748691921631952896']
-  masterposts.each do |post_id|
-    masterpost = TUMBLR.post(:ferronickel, post_id)
-    links = Nokogiri::parse("<html>" + masterpost.body + "</html>").css('a[href^="https://www.tumblr.com"]').map {|a| a.attribute("href").value }
-    post_ids.merge links.map &method(:extract_post_id)
-  end
+  unless ARGV.empty?
+    post_ids.merge ARGV
+  else
+    masterposts = ['771054699653791744', '748691921631952896']
+    masterposts.each do |post_id|
+      masterpost = TUMBLR.post(:ferronickel, post_id)
+      links = Nokogiri::parse("<html>" + masterpost.body + "</html>").css('a[href^="https://www.tumblr.com"]').map {|a| a.attribute("href").value }
+      post_ids.merge links.map &method(:extract_post_id)
+    end
 
-  # Get all the posts tagged with #looking glasses and #ferrousart, which
-  # catches most of them but misses some early ones, and also pull the
-  # #runetober 2022 posts as well
-  [
-    ['looking glasses', 'ferrousart'],
-    ['runetober', 'ferrousart'],
-  ].each do |tagset|
-    TUMBLR.posts(:ferronickel, tag: tagset).each do |post|
-      post_ids -= [post.id_string]
-      archive post
+    # Get all the posts tagged with #looking glasses and #ferrousart, which
+    # catches most of them but misses some early ones, and also pull the
+    # #runetober 2022 posts as well
+    [
+      ['looking glasses', 'ferrousart'],
+      ['runetober', 'ferrousart'],
+    ].each do |tagset|
+      TUMBLR.posts(:ferronickel, tag: tagset).each do |post|
+        post_ids -= [post.id_string]
+        archive post
+      end
     end
   end
 
