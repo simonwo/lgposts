@@ -24,9 +24,11 @@ jobs:
           TUMBLR_SECRET_KEY: ${{ secrets.TUMBLR_SECRET_KEY }}
           TUMBLR_CLIENT_KEY: ${{ secrets.TUMBLR_CLIENT_KEY }}
       - name: Build index
+        if: '!cancelled()'
         run: |
           jq '{"id": .id_string, "timestamp": .timestamp}' _site/*.json | jq -s 'sort_by(.timestamp)' > _site/index.json
       - uses: actions/upload-pages-artifact@v3.0.1
+        if: '!cancelled()'
         with:
           path: _site
 
