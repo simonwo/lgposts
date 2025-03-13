@@ -112,6 +112,55 @@ def post_filename post_id
   "_site/#{post_id.to_s}.json"
 end
 
+# (18d picked so that we aren't updating posts on the same day we are likely to
+# be downloading new ones, as new posts either come out on multiples of 7 or 10
+# days).
+POST_MAX_AGE_DAYS = 18
+
+# Encodes the caching policy, which is:
+# - new posts (age <= 48hrs) are always updated as any edits to posts or reblogs
+#   are likely to happen whilst they are young
+# - older posts (48hrs < age) are updated:
+#   - if we retrieved more than 48hrs ago and their number of notes has changed
+#   - or at a minimum every so many days, so that edits to old posts are
+#     eventually picked up
+#
+# Doing this allows us to skip retrieving posts altogether more than one every
+# two days, as we can compute most of this from the existing archived post.
+def needs_update post_id, post=nil
+  # New post never cached
+  unless File.exist? post_filename(post_id)
+    STDOUT.puts "\tPost #{post_id} never archived."
+    return true
+  end
+  old_post = JSON.parse(File.read(post_filename(post_id)), object_class: OpenStruct)
+
+  # More than post maximum age days old
+  retrieved = Time.at old_post.retrieved
+  unless retrieved.to_datetime.next_day(POST_MAX_AGE_DAYS) > Time.now.to_datetime
+    STDOUT.puts "\tArchive of #{post_id} is more than #{POST_MAX_AGE_DAYS}d old."
+    return true
+  end
+
+  # Young post gets updated
+  young_post = Time.at(old_post.timestamp).to_datetime.next_day(2) > Time.now.to_datetime
+  if young_post
+    STDOUT.puts "\tPost #{post_id} is young."
+  end
+
+  # All other posts only checked for new notes every 2 days
+  checked_recently = retrieved.to_datetime.next_day(2) > Time.now.to_datetime
+  unless checked_recently
+    post ||= TUMBLR.post(:ferronickel, post_id)
+    if old_post.note_count != post.note_count
+      STDOUT.puts "\tPost #{post_id} has different note count to archive."
+      return true
+    end
+  end
+
+  return false
+end
+
 if __FILE__ == $0
   post_ids = Set.new
   unless ARGV.empty?
@@ -133,14 +182,18 @@ if __FILE__ == $0
     ].each do |tagset|
       TUMBLR.posts(:ferronickel, tag: tagset).each do |post|
         post_ids -= [post.id_string]
-        archive post
+        if needs_update(post.id_string, post)
+          archive post
+        end
       end
     end
   end
 
   # Now get any links from the masterpost that we didn't archive
   post_ids.each do |id|
-    archive TUMBLR.post(:ferronickel, id)
+    if needs_update(id)
+      archive TUMBLR.post(:ferronickel, id)
+    end
   end
 
   STDOUT.puts "#{TUMBLR.instance_variable_get(:'@request_counter')} requests."

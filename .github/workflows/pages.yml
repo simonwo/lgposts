@@ -1,15 +1,15 @@
 name: Archive
 on:
+  workflow_dispatch:
   schedule:
-    # Update every 12 hours, at quarter past to avoid top of hour load.
-    - cron: '15 11,23 * * *'
-    # On Mondays, run additionally around likely update times.
-    - cron: '15 12,13,14,15,21,22 * * 1'
-    # On Tuesdays, run more often to catch notes in the first 48hrs.
-    - cron: '15 0,3,7,15,19 * * 2'
+    # Update every 6 hours, at quarter past to avoid top of hour load.
+    - cron: '15 5,11,17,23 * * *'
 
 jobs:
   build:
+    permissions:
+      actions: read
+
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,15 +18,36 @@ jobs:
         with:
           ruby-version: '3.2'
           bundler-cache: true
-      - run: mkdir _site
+
+      - uses: SamhammerAG/last-successful-build-action@v7
+        id: last-build
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          workflow: Archive
+          branch: main
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: github-pages
+          path: _site
+          github-token: ${{ secrets.GITHUB_TOKEN }} # token with actions:read permissions on target repo
+          run-id: ${{ steps.last-build.outputs.run-id }}
+
+      - run: tar -xvf artifact.tar
+        working-directory: _site
+
       - run: bundle exec ruby archive.rb
         env:
           TUMBLR_SECRET_KEY: ${{ secrets.TUMBLR_SECRET_KEY }}
           TUMBLR_CLIENT_KEY: ${{ secrets.TUMBLR_CLIENT_KEY }}
+
       - name: Build index
         if: '!cancelled()'
         run: |
-          jq '{"id": .id_string, "timestamp": .timestamp}' _site/*.json | jq -s 'sort_by(.timestamp)' > _site/index.json
+          find _site -name '*.json' ! -name 'index.json' |
+          xargs jq '{"id": .id_string, "timestamp": .timestamp}' |
+          jq -s 'sort_by(.timestamp)' > _site/index.json
+
       - uses: actions/upload-pages-artifact@v3.0.1
         if: '!cancelled()'
         with:
