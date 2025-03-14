@@ -177,7 +177,7 @@ if __FILE__ == $0
     # catches most of them but misses some early ones, and also pull the
     # #runetober 2022 posts as well
     [
-      ['looking glasses', 'ferrousart'],
+      ['looking glasses'],
       ['runetober', 'ferrousart'],
     ].each do |tagset|
       TUMBLR.posts(:ferronickel, tag: tagset).each do |post|
