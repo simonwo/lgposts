@@ -15,9 +15,17 @@ def extract_post_id url
   URI::parse(url).path.split("/").select {|path| path =~ /^\d+$/ }.first
 end
 
+PAGE_SIZE = 50
+MAX_PAGES = 50
+
 TUMBLR = Tumblr.new
 
 def archive post
+  if post.note_count / PAGE_SIZE > MAX_PAGES
+    puts "::warning::Skipping #{post.id_string} because it has too many notes (#{post.note_count})"
+    return
+  end
+
   reblogs = TUMBLR.notes(post.blog_name, post.id, :reblogs_with_tags).filter {|note| note.type == "reblog" }
   conversation = TUMBLR.notes(post.blog_name, post.id, :conversation)
   replies = conversation.filter {|note| note.type == "reply" }
