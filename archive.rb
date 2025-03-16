@@ -154,6 +154,7 @@ def needs_update post_id, post=nil
   young_post = Time.at(old_post.timestamp).to_datetime.next_day(2) > Time.now.to_datetime
   if young_post
     STDOUT.puts "\tPost #{post_id} is young."
+    return true
   end
 
   # All other posts only checked for new notes every 2 days
