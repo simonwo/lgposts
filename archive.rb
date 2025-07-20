@@ -188,6 +188,7 @@ if __FILE__ == $0
     [
       ['looking glasses'],
       ['runetober', 'ferrousart'],
+      ['deltarune', 'ferrousart'],
     ].each do |tagset|
       TUMBLR.posts(:ferronickel, tag: tagset).each do |post|
         post_ids -= [post.id_string]
