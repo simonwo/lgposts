@@ -175,7 +175,11 @@ if __FILE__ == $0
   unless ARGV.empty?
     post_ids.merge ARGV
   else
-    masterposts = ['771054699653791744', '748691921631952896']
+    masterposts = [
+      '771054699653791744',
+      '748691921631952896',
+      '703477379009495040',
+    ]
     masterposts.each do |post_id|
       masterpost = TUMBLR.post(:ferronickel, post_id)
       links = Nokogiri::parse("<html>" + masterpost.body + "</html>").css('a[href^="https://www.tumblr.com"]').map {|a| a.attribute("href").value }
