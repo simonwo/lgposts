@@ -161,6 +161,9 @@ def needs_update post_id, post=nil
   checked_recently = retrieved.to_datetime.next_day(2) > Time.now.to_datetime
   unless checked_recently
     post ||= TUMBLR.post(:ferronickel, post_id)
+    if post.nil?
+      STDOUT.puts "::warning::Unable to retrieve #{post.id_string}"
+      return false
     if old_post.note_count != post.note_count
       STDOUT.puts "\tPost #{post_id} has different note count to archive."
       return true
