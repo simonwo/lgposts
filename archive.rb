@@ -21,10 +21,7 @@ MAX_PAGES = 50
 TUMBLR = Tumblr.new
 
 def archive post
-  if post.nil?
-    STDOUT.puts "::warning::Unable to retrieve #{post_id}"
-    return
-  elsif post.note_count / PAGE_SIZE > MAX_PAGES
+  if post.note_count / PAGE_SIZE > MAX_PAGES
     puts "::warning::Skipping #{post.id_string} because it has too many notes (#{post.note_count})"
     return
   end
@@ -212,7 +209,12 @@ if __FILE__ == $0
   # Now get any links from the masterpost that we didn't archive
   post_ids.each do |id|
     if needs_update(id)
-      archive TUMBLR.post(:ferronickel, id)
+      post = TUMBLR.post(:ferronickel, id)
+      if post.nil?
+        STDOUT.puts "::warning::Unable to retrieve #{id}"
+        next
+      else
+        archive post
     end
   end
 
