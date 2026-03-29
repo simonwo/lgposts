@@ -215,6 +215,7 @@ if __FILE__ == $0
         next
       else
         archive post
+      end 
     end
   end
 
