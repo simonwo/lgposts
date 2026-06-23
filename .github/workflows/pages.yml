@@ -19,21 +19,24 @@ jobs:
           ruby-version: '3.2'
           bundler-cache: true
 
-      - uses: SamhammerAG/last-successful-build-action@v7
-        id: last-build
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          workflow: Archive
-          branch: main
+      - id: last-build
+        run: |
+          curl -L -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2026-03-10" 'https://api.github.com/repos/simonwo/lgposts/actions/artifacts' |
+          jq '.artifacts.[] | select(.expired == false) | select(.size_in_bytes > 15000) | .workflow_run.id' | head -n1 | xargs printf 'run-id=%s' >> "$GITHUB_OUTPUT"
 
       - uses: actions/download-artifact@v4
+        if: ${{ steps.last-build.outputs.run-id != '' }}
         with:
           name: github-pages
           path: _site
           github-token: ${{ secrets.GITHUB_TOKEN }} # token with actions:read permissions on target repo
           run-id: ${{ steps.last-build.outputs.run-id }}
 
+      - run: mkdir -p _site
+        if: ${{ steps.last-build.outputs.run-id == '' }}
+
       - run: tar -xvf artifact.tar
+        if: ${{ steps.last-build.outputs.run-id != '' }}
         working-directory: _site
 
       - run: bundle exec ruby archive.rb
