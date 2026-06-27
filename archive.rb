@@ -58,15 +58,24 @@ def archive post
 
   reblogs.each do |reblog|
     reblog.url = "https://www.tumblr.com/blog/view/#{reblog.blog_name}/#{reblog.post_id}"
+    full_post = nil
 
     if [reblog.tags, reblog.reblog_parent_post_id].any?(&:nil?)
-      fetched_post = TumblrLite::post(reblog.blog_name, reblog.post_id)
+      fetched_post = begin
+        TumblrLite::post(reblog.blog_name, reblog.post_id)
+      rescue
+        full_post = TUMBLR.post(reblog.blog_name, reblog.post_id)
+      end
       reblog.private = fetched_post.nil?
       next if reblog.private
 
       reblog.tags = fetched_post.tags
       reblog.url = fetched_post.url
-      reblog.reblog_parent_post_id = extract_post_id(fetched_post.send(:"reblogged-from-url"))
+      if fetched_post.respond_to? :parent_post_url
+        reblog.reblog_parent_post_id = extract_post_id(fetched_post.send(:parent_post_url))
+      else
+        reblog.reblog_parent_post_id = extract_post_id(fetched_post.send(:"reblogged-from-url"))
+      end
     end
 
     # If the reblog has added text, we might not have all of it, so let's get it
@@ -78,7 +87,7 @@ def archive post
       unless reblog.private
         # The post itself obviously has the full text, but if the post is
         # private this call will fail, so skip it if we already know that
-        full_post = TUMBLR.post(reblog.blog_name, reblog.post_id)
+        full_post ||= TUMBLR.post(reblog.blog_name, reblog.post_id)
         unless full_post.nil?
           reblog.added_text = full_post.reblog.comment
         end
@@ -163,7 +172,7 @@ def needs_update post_id, post=nil
     post ||= TUMBLR.post(:ferronickel, post_id)
     if post.nil?
       STDOUT.puts "::warning::Unable to retrieve #{post_id}"
-      return false 
+      return false
     elsif old_post.note_count != post.note_count
       STDOUT.puts "\tPost #{post_id} has different note count to archive."
       return true
@@ -215,7 +224,7 @@ if __FILE__ == $0
         next
       else
         archive post
-      end 
+      end
     end
   end
 
